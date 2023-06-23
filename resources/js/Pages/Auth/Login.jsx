@@ -10,7 +10,7 @@ import GlobalFunctions from '../services/GlobalFunctions';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function Login({ status, canResetPassword, info, auth, productos, globalVars, request }) {
+export default function Login({ status, canResetPassword, info, auth, productos, globalVars, categorias }) {
 
     const glob = new GlobalFunctions();
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -18,31 +18,9 @@ export default function Login({ status, canResetPassword, info, auth, productos,
         password: '',
         remember: false,
     });
-    console.log(request)
+
     useEffect(() => {
-        validarRemember()
-        validarRedirect()
-        return () => {
-            reset('password');
-        };
-    }, []);
-
-    function validarRedirect(){
-        if(request.email!=''){
-            setData((valores) => ({
-                ...valores,
-                email: request.email,
-                password: request.password,
-                remember: true
-            }))
-            setTimeout(() => {
-              //  console.log('go')
-             // document.getElementById('btnLogin').click()
-            }, 200);
-        }
-    }
-
-    function validarRemember() {
+        validarErrors()
         if (glob.getCookie('email') != '') {
             setData((valores) => ({
                 ...valores,
@@ -51,18 +29,42 @@ export default function Login({ status, canResetPassword, info, auth, productos,
                 remember: true
             }))
         }
+        return () => {
+            reset('password');
+        };
+    }, []);
+
+    useEffect(() => {
+        validarErrors()
+    });
+
+    function validarErrors() {
+        if (errors.email == 'These credentials do not match our records.') {
+            errors.email=''
+            loadingOff()
+        }
     }
 
     const submit = (e) => {
+        loadingOn()
         e.preventDefault();
         post(route('login'));
     };
 
+    function loadingOn() {
+        document.getElementById('btnLoading').style.display = ''
+        document.getElementById('btnLogin').style.display = 'none'
+    }
+
+    function loadingOff() {
+        document.getElementById('btnLoading').style.display = 'none'
+        document.getElementById('btnLogin').style.display = ''
+    }
+
     return (
         <>
-
             <Head title="Welcome" />
-            <AuthenticatedLayout user={auth} info={info} globalVars={globalVars} productos={productos} >
+            <AuthenticatedLayout user={auth} info={info} globalVars={globalVars} productos={productos} categorias={categorias}>
                 <GuestLayout >
                     <Head title="Log in" />
                     {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
@@ -71,7 +73,7 @@ export default function Login({ status, canResetPassword, info, auth, productos,
                             <img className='img-fuild rounded' width="120em" height="120em" src={info.length == 0 ? '' : globalVars.urlRoot + '/Imagenes_productos/' + info.logo} />
                         </Link>
                     </div>
-                    <form id='formLogin'action={route('login')}  method="post" onSubmit={submit}>
+                    <form id='formLogin' action={route('login')} method="post" onSubmit={submit}>
                         <div>
                             <InputLabel htmlFor="email" value="Email" />
 
@@ -106,9 +108,13 @@ export default function Login({ status, canResetPassword, info, auth, productos,
                         </div>
 
                         <div style={{ marginTop: '2em' }} className="grid place-items-center">
-                            <PrimaryButton id='btnLogin' type='submit' style={{ backgroundColor: info.color_pagina }} className="ml-4" disabled={processing}>
+                            <PrimaryButton id='btnLogin' type='submit' className="ml-4" disabled={processing}>
                                 Iniciar sesión
                             </PrimaryButton>
+                            <button id='btnLoading' style={{ display: 'none', backgroundColor: 'gray' }} className="btn btn-primary" type="button" disabled>
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                Loading...
+                            </button>
                         </div>
                         <div style={{ marginTop: '1.5em' }} className="grid place-items-center m-3">
                             <label className="flex items-center">
@@ -130,7 +136,7 @@ export default function Login({ status, canResetPassword, info, auth, productos,
                         </Link>
                     </div>
                     <div className="flex items-center justify-end mt-4">
-                        <a href={route('profile.create')} className="btn btn-outline-primary btn-sm" disabled={processing}>
+                        <a href={route('register')} className="btn btn-outline-primary btn-sm" disabled={processing}>
                             Crear una cuenta
                         </a>
                     </div>

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\Key;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -13,40 +13,55 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\DB;
+use App\Models\Globalvar;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
-    public function create(): Response
+    public $global = null;
+
+    public function __construct()
     {
-        return Inertia::render('Auth/Register');
+        $this->global = new Globalvar();
     }
 
-    /**
-     * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    public function store(Request $request): RedirectResponse
+    public function create()
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        $info = DB::table('info_pagina')->first();
+        $globalVars = $this->global->getGlobalVars();
+        $productos = DB::table('productos')->orderBy('id', 'desc')->get();
+        $auth = Auth()->user();
+        $token = csrf_token();
+        $resp = '';
+        $categorias = DB::table('categorias')->get();
+        return Inertia::render('Auth/Register', compact('auth', 'info', 'globalVars', 'productos', 'token', 'resp', 'categorias'));
+    }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        event(new Registered($user));
-
-        Auth::login($user);
-
-        return redirect(RouteServiceProvider::HOME);
+    public function store(Request $request)
+    {
+        $ifExisted = DB::table('keys')->where('email', '=', $request->email)->get();
+        if (count($ifExisted) == 0) {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255',
+                'password' => ['required']
+            ]);
+            $user = Key::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+            event(new Registered($user));
+            Auth::login($user);
+            return redirect(RouteServiceProvider::HOME);
+        } else {
+            $resp = 'Ya existe una cuenta asociada al correo ingresado!';
+            $info = DB::table('info_pagina')->first();
+            $globalVars = $this->global->getGlobalVars();
+            $productos = DB::table('productos')->orderBy('id', 'desc')->get();
+            $auth = Auth()->user();
+            $token = csrf_token();
+            return Inertia::render('Auth/Register', compact('auth', 'info', 'globalVars', 'productos', 'token', 'resp'));
+        }
     }
 }

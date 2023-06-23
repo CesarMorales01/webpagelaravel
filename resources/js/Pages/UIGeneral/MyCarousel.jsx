@@ -37,7 +37,7 @@ const MyCarousel = (params) => {
                         params.promos.map((item, index) => {
                             return (
                                 <Carousel.Item onClick={()=>goProduct(item.ref_producto)} className='textAlignCenter' key={index}>
-                                    <img style={{ backgroundColor: 'red' }} onLoad={loadingImgCarousel} id={item.referencia} className={'centerImgCarousel cursorPointer ' + thisWidth}
+                                    <img onLoad={loadingImgCarousel} id={item.referencia} className={'centerImgCarousel cursorPointer ' + thisWidth}
                                         src={params.globalVars.urlRoot + item.imagen}
                                         alt=""
                                     />

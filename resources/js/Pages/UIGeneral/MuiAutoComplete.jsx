@@ -14,7 +14,7 @@ function MuiAutoComplete(params) {
     
     function getSize() {
         let ancho=window.innerWidth;
-        if(ancho<1004 && ancho>700 & document.getElementById('btnSearch')!=null){
+        if(ancho<1090 && ancho>700 & document.getElementById('btnSearch')!=null){
             document.getElementById('btnSearch').style.display='none'
         }else{
             document.getElementById('btnSearch').style.display='inline'
@@ -34,13 +34,17 @@ function MuiAutoComplete(params) {
 
     function getOnchange(newValue) {
         // Se ejecuta al cambiar un valor del array
-        const busc= datos.filter(val => val === newValue)
-        window.location.href= params.url+'product/'+busc[0].id
-       
+        const tipo= typeof newValue
+        if(tipo==='object'){
+            const busc= datos.filter(val => val === newValue)
+            window.location.href= params.url+'product/'+busc[0].id
+        }else{
+            window.location.href= params.url+'product/search/'+newValue
+        }
     }
 
     function buscar() {
-        window.location.href= params.url+'search/'+inputValue
+        window.location.href= params.url+'product/search/'+inputValue
     }
 
     function submitHandler(e) {
@@ -55,8 +59,8 @@ function MuiAutoComplete(params) {
                         disablePortal
                         id="combo-box-demo"
                         value={value}
-                        sx={{ width: 300 }}
-                        renderInput={(params) => <TextField {...params} size="small" />}
+                        sx={{ width: 260 }}
+                        renderInput={(params) => <TextField {...params} InputLabelProps={{ style: {color: 'black'} }} label="Buscar..."  size="small" />}
                         onChange={(_, newValue) => {
                             getOnchange(newValue)
                         }}

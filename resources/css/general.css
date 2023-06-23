@@ -113,3 +113,9 @@
     background-color:  white;
     padding: 6px;
   }
+
+  .swal2-popup {
+    font-size: 0.9em !important;
+    font-style: bold !important;
+    font-family: 'Times New Roman', 'serif';
+  }

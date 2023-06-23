@@ -8,7 +8,7 @@ import SuggestedProducts from './UIGeneral/SuggestedProducts';
 import Contact from './Contact/Contact';
 
 export default function Welcome(params) {
-    console.log(params)
+
     const glob = new GlobalFunctions()
     const [closeBtn, setCloseBtn] = useState(glob.getCookie('closeBtn'))
 
@@ -20,11 +20,8 @@ export default function Welcome(params) {
     function validarRedireccion() {
         if (params.auth) {
             var variable = parseInt(glob.getCookie('productForCar'));
-            console.log(variable)
-            if (isNaN(variable)) {
-                console.log("si")
-            } else {
-                window.location.href = params.globalVars.myUrl + 'product/' + glob.getCookie('productForCar')
+            if (isNaN(variable)) { } else {
+                window.location.href = params.globalVars.thisUrl + 'product/' + glob.getCookie('productForCar')
                 glob.setCookie('productForCar', '', -1)
             }
         }
@@ -36,7 +33,9 @@ export default function Welcome(params) {
         }
         if (closeBtn >= 4) {
             setTimeout(() => {
-                closeWhats()
+                if (document.getElementById("divWhats") != null) {
+                    closeWhats()
+                }
             }, 4000);
         }
     }
@@ -82,13 +81,13 @@ export default function Welcome(params) {
         let array = []
         for (let x = 0; x < params.productos.length; x++) {
             if (params.categorias[i].nombre == params.productos[x].categoria) {
-                let pojo = new PojoProducto(params.productos[x].nombre, params.productos[x].codigo)
+                let pojo = new PojoProducto(params.productos[x].nombre, params.productos[x].id)
                 pojo.setDescripcion(params.productos[x].descripcion)
                 pojo.setImagen(params.productos[x].imagen.nombre_imagen)
                 // darle formato al precio
                 let precio_format = new Intl.NumberFormat("de-DE").format(params.productos[x].valor)
                 pojo.setPrecio("$ " + precio_format)
-                pojo.setRef(params.productos[x].id)
+                pojo.setRef(params.productos[x].referencia)
                 array.push(pojo)
             }
         }
@@ -106,10 +105,14 @@ export default function Welcome(params) {
         matrix[i] = array2
     }
 
+    function goCategoria(cate){
+        window.location.href= params.globalVars.thisUrl+'product/search/'+cate
+    }
+
     return (
         <>
             <Head title="Welcome" />
-            <AuthenticatedLayout user={params.auth} info={params.info} globalVars={params.globalVars} productos={params.productos} >
+            <AuthenticatedLayout user={params.auth} info={params.info} globalVars={params.globalVars} productos={params.productos} categorias={params.categorias} >
                 <MyCarousel promos={params.promos} globalVars={params.globalVars}></MyCarousel>
                 {/*Cards categorias*/}
                 <br></br>
@@ -120,8 +123,8 @@ export default function Welcome(params) {
                     <div className="row">
                         {params.categorias.map((item, index) => {
                             return (
-                                <div style={{ marginTop: '1em' }} key={index} className='col-lg-4 col-md-6 col-sm-12 col-12'>
-                                    <div id={index + "divCategorias"} onTouchEnd={() => desactivarHover(index)} onTouchStart={() => activarHover(index)} className="card border border card-flyer pointer">
+                                <div style={{ marginTop: '1em', cursor: 'pointer' }} key={index} className='col-lg-4 col-md-6 col-sm-12 col-12'>
+                                    <div onClick={()=>goCategoria(item.nombre)} id={index + "divCategorias"} onTouchEnd={() => desactivarHover(index)} onTouchStart={() => activarHover(index)} className="card border border card-flyer pointer">
                                         <h1 style={{ marginTop: 6, fontSize: '1.4em' }} className="card-title generalFontStyle">
                                             {item.nombre}
                                         </h1>
@@ -146,7 +149,7 @@ export default function Welcome(params) {
                     <div>
                         {params.categorias.map((it, index) => {
                             return (
-                                <SuggestedProducts key={it.id} categoria={it.nombre} productos={matrix[index]} url={params.globalVars.urlRoot} />
+                                <SuggestedProducts key={it.id} categoria={it.nombre} productos={matrix[index]} globalVars={params.globalVars} />
                             )
                         })}
                     </div>

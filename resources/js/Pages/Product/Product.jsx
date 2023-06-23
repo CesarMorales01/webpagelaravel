@@ -13,7 +13,7 @@ import Questions from './Questions'
 import Swal from 'sweetalert2';
 
 const Product = (params) => {
-  console.log(params)
+
   const glob = new GlobalFunctions()
   const [producto, setProducto] = useState(params.producto)
   const [cantidad, setCantidad] = useState(1)
@@ -41,7 +41,7 @@ const Product = (params) => {
     }
     return widthDiv
   }
- 
+
   function sweetAlert(mensaje) {
     Swal.fire({
       title: mensaje,
@@ -49,15 +49,17 @@ const Product = (params) => {
       showCancelButton: false,
       showConfirmButton: false,
       timer: 1500,
+      timerProgressBar: true
     })
   }
 
-
   function procesarDatos() {
-    if (descripcion.length == 0) {
+    if (params.producto.descripcion != null && descripcion.length == 0) {
       setDescripcion(params.producto.descripcion.split("."))
     }
-    //setTimeout(setPromoPrecio, 100)
+    setTimeout(() => {
+      functionSetPrecioAntes()
+    }, 100);
   }
 
   const handleSelect = (selectedIndex, e) => {
@@ -75,28 +77,16 @@ const Product = (params) => {
     document.getElementById('divMin' + index).style.borderLeft = "thick solid brown";
   }
 
-
-  function sendClickProducto(event) {
-    let id = event.currentTarget.id
-    const urlProducto = params.datos[0].otros1 + "product/" + id
-    window.location.href = urlProducto
-  }
-
-  function setPromoPrecio() {
-    functionSetPrecioAntes()
-    functionSetDescripcion()
-  }
-
   function functionSetProductosSugeridos() {
     if (productoSugeridos.length == 0) {
       // Creación de arrays para mostrar resumen de productos por categorias
       let array = []
       for (let x = 0; x < params.productos.length; x++) {
         if (producto.categoria == params.productos[x].categoria) {
-          let pojo = new PojoProducto(params.productos[x].nombre, params.productos[x].codigo)
+          let pojo = new PojoProducto(params.productos[x].nombre, params.productos[x].id)
           pojo.setImagen(params.productos[x].imagen.nombre_imagen)
           // darle formato al precio
-          let precio_format = new Intl.NumberFormat("de-DE").format(params.productos[x].precio)
+          let precio_format = new Intl.NumberFormat("de-DE").format(params.productos[x].valor)
           pojo.setPrecio("$ " + precio_format)
           pojo.setRef(params.productos[x].referencia)
           array.push(pojo)
@@ -120,11 +110,10 @@ const Product = (params) => {
   function functionSetPrecioAntes() {
     let num = Math.random()
     let item = document.getElementById("tv_precio_antes")
-    if (num > 0.8 && precioAntes && item != null && pojo.precio != '0') {
-      let precio_ant = (parseInt(producto[0].precio) * 0.2) + parseInt(producto[0].precio);
-      var precio_format = new Intl.NumberFormat("de-DE").format(precio_ant);
-      document.getElementById("tv_precio_antes").innerText = "Antes: $ " + precio_format;
-      document.getElementById("tv_precio").innerText = "Hoy: " + pojo.precio
+    if (num > 0.8 && precioAntes && item != null && producto.valor != '0') {
+      let precio_ant = (parseInt(producto.valor) * 0.2) + parseInt(producto.valor);
+      document.getElementById("tv_precio_antes").innerText = "Antes: $ " + new Intl.NumberFormat("de-DE").format(precio_ant);
+      document.getElementById("tv_precio").innerText = "Hoy: $" + new Intl.NumberFormat("de-DE").format(producto.valor)
     }
     setPrecioAntes(false)
   }
@@ -158,6 +147,18 @@ const Product = (params) => {
   }
 
   function masCant() {
+    if (params.producto.cantidad != null) {
+      if (params.producto.cantidad < cantidad + 1) {
+        return
+      } else {
+        setCant()
+      }
+    } else {
+      setCant()
+    }
+  }
+
+  function setCant() {
     if (cantidad < 6) {
       setCantidad(cantidad + 1)
     }
@@ -171,127 +172,25 @@ const Product = (params) => {
       glob.setCookie('productForCar', producto.id, 3600)
       sweetAlert("Debes identificarte para agregar al carrito!")
       setTimeout(() => {
-        window.location.href= params.globalVars.thisUrl+'log'
+        window.location.href = params.globalVars.thisUrl + 'log'
       }, 1500);
-      
     }
   }
 
   function guardarEnCarrito() {
     document.getElementById('btnComprar').style.display = 'none'
     document.getElementById('btnLoading').style.display = 'inline'
-    const fecha = glob.getFecha()
-    let objeto = {
-      "cliente": glob.getCookie('correo'),
-      "cod": producto[0].codigo,
-      "producto": producto[0].nombre,
-      "imagen": pojo.listaImagenes[0].nombre,
-      "valor": producto[0].precio,
-      "cantidad": cantidad,
-      "fecha": fecha
-    };
-    validarInsertUpdate(objeto)
-  }
-
-  function compararItems(json, datos) {
-    let cant = 0
-    json.map((item) => {
-      if (item.codigo == datos.cod) {
-        cant = item.cantidad
-      }
-    })
-    if (cant > 0) {
-      actualizarCarrito(datos, cant)
-    } else {
-      insertarCarrito(datos)
-    }
-  }
-
-  function actualizarCarrito(datos, cant) {
-    let objeto = {
-      "cod": datos.cod,
-      "cliente": glob.getCookie('correo'),
-      "cantidad": parseInt(cant) + 1
-    };
-    const url = glob.URL_SERV + 'getCarrito.php?modo=actualizarCantidad'
-    fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(objeto),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-      .then((response) => {
-        return response.json()
-      }).then((json) => {
-        validarInsercion(json)
-      })
-  }
-
-  function insertarCarrito(datos) {
-    const url = glob.URL_SERV + 'getCarrito.php?modo=insert';
-    fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(datos),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(function (response) {
-      return response.json();
-    }).then(function (data) {
-      validarInsercion(data)
-    }).catch(function (error) {
-      loadingOff()
-    })
-  }
-
-  function validarInsertUpdate(datos) {
-    const url = glob.URL_SERV + 'getCarrito.php?modo=getCarrito&id=' + glob.getCookie('correo')
-    fetch(url)
-      .then((response) => {
-        return response.json()
-      }).then((json) => {
-        compararItems(json, datos)
-      })
-  }
-
-  function validarInsercion(data) {
-    loadingOff()
-    if (data[0].nombre == "Registro") {
-      document.getElementById('inputGoCarrito').click()
-    } else {
-      alert("Error al ingresar en carrito. Cuéntanoslo por alguno de nuestros medios de comunicación!")
-    }
-  }
-
-  function loadingOff() {
-    document.getElementById('btnComprar').style.display = 'inline'
-    document.getElementById('btnLoading').style.display = 'none'
+    document.getElementById('formRegistro').submit()
   }
 
   function loadingImgMain() {
     document.getElementById('spanCargandoImagen').style.display = 'none'
   }
 
-  function procesarPreguntaLogin() {
-    // guardo una cookie para cuando no hay sesion iniciada, y una vez hecha retornar al product
-    if (glob.getCookie('correo') === '') {
-      glob.setCookie('productForCar', producto[0].codigo, 3600)
-    } else {
-      glob.setCookie('productForCar', producto[0].codigo, 0)
-    }
-    setLoginMessage('Debes identificarte para preguntar!')
-    setTimeout(() => {
-      document.getElementById('inputIrLogin').click()
-    }, 200);
-
-  }
-
-  // Inicio class jsx
   return (
     <>
-      <Head title="Welcome" />
-      <AuthenticatedLayout user={params.auth} info={params.info} globalVars={params.globalVars} productos={params.productos} >
+      <Head title={params.producto.nombre} />
+      <AuthenticatedLayout user={params.auth} info={params.info} globalVars={params.globalVars} productos={params.productos} categorias={params.categorias}>
         <div id="div_producto_todo">
           {/*div contenedor producto: miniaturas, img main y comprar*/}
           <div className="row">
@@ -325,59 +224,69 @@ const Product = (params) => {
             <div className="col-lg-4 col-md-4 col-sm-12">
               <div style={{ padding: '0.1em' }} className="card text-center card-flyer">
                 <div>
-                  <br />
-                  <h1 id="titulo_producto" style={{ fontSize: '1.4em', fontWeight: 'bold' }}>{producto.nombre}</h1>
-                  <br />
-                  <h3 id="tv_precio_antes" style={{ color: 'red', textDecoration: 'line-through' }} className="fontSizePreciosSuggested"></h3>
-                  <h3 id="tv_precio" style={{ fontSize: '1.4em', fontWeight: 'bold' }}>{producto.cantidad == 0 ? '-' : '$ ' + glob.formatNumber(producto.valor)}</h3>
-                  <br />
-                  <div className="container">
-                    <div className="row">
-                      <div className="col-sm-5 col-12">
-                        <h6 >Cantidad</h6>
+                  <form id='formRegistro' action={route('shopping.store')} method="post" >
+                    <input type='hidden' name='_token' value={params.token}></input>
+                    <input type='hidden' name='codigo' value={producto.id}></input>
+                    <input type='hidden' name='nombre' value={producto.nombre}></input>
+                    <input type='hidden' name='imagen' value={producto.imagen[0].nombre_imagen}></input>
+                    <input type='hidden' name='cantidad' value={cantidad}></input>
+                    <input type='hidden' name='valor' value={producto.valor}></input>
+                    <input type='hidden' name='fecha' value={glob.getFecha()}></input>
+                    <br />
+                    <h1 id="titulo_producto" style={{ fontSize: '1.4em', fontWeight: 'bold' }}>{producto.nombre}</h1>
+                    <br />
+                    <h3 id="tv_precio_antes" style={{ color: 'red', textDecoration: 'line-through' }} className="fontSizePreciosSuggested"></h3>
+                    <h3 id="tv_precio" style={{ fontSize: '1.4em', fontWeight: 'bold' }}>{producto.cantidad == 0 ? '-' : '$ ' + glob.formatNumber(producto.valor)}</h3>
+                    <br />
+                    <div className="container">
+                      <div className="row">
+                        <div className="col-sm-5 col-12">
+                          <h6 >Cantidad</h6>
+                        </div>
+                        <div onClick={menosCant} className="col-sm-1 col-4 cursorPointer">
+                          <i style={{ color: 'green' }} className="fas fa-minus"></i>
+                        </div>
+                        <div className="col-sm-4 col-4">
+                          <span style={{ fontWeight: 'bold', fontSize: '1.3em' }}>{cantidad}</span>
+                        </div>
+                        <div onClick={masCant} className="col-sm-1 col-4 cursorPointer">
+                          <i style={{ color: 'green', fontSize: '1.5em' }} className="fas fa-plus"></i>
+                        </div>
                       </div>
-                      <div onClick={menosCant} className="col-sm-1 col-4 cursorPointer">
-                        <i style={{ color: 'green' }} className="fas fa-minus"></i>
-                      </div>
-                      <div className="col-sm-4 col-4">
-                        <span style={{ fontWeight: 'bold', fontSize: '1.3em' }}>{cantidad}</span>
-                      </div>
-                      <div onClick={masCant} className="col-sm-1 col-4 cursorPointer">
-                        <i style={{ color: 'green', fontSize: '1.5em' }} className="fas fa-plus"></i>
-                      </div>
+                      <p style={{ fontSize: '0.9em', display: params.producto.cantidad!=null ? '' : 'none' }}>(Disponibles: {params.producto.cantidad})</p>
                     </div>
-                  </div>
-                  <br />
-                  <h3 className='fontSizePreciosSuggested'>Envio gratis en el área metrópolitana de Bucaramanga!</h3>
-                  <p >(Compras superiores a $100.000)</p>
-                  <br />
-                  <h3 className='fontSizePreciosSuggested'>A otras ciudades del pais el valor del envio es de $25.000.</h3>
-                  <br />
-                  <h3 id="tv_llega" ></h3>
-                  {/*formulario producto */}
-                  <PrimaryButton id='btnComprar' type='button' onClick={checkUsuario} style={{ backgroundColor: producto.cantidad == 0 ? 'gray' : 'greeen' }}
-                    className="btn btn-success" disabled={producto.cantidad == 0 ? true : false}>{producto.cantidad == 0 ? 'Producto agotado' : 'Comprar'}
-                  </PrimaryButton>
-                  <button id='btnLoading' style={{ display: 'none', backgroundColor: 'green' }} className="btn btn-primary" type="button" disabled>
-                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    Loading...
-                  </button>
-                  <div style={{ textAlign: 'right' }} className='container'>
-                    <RWebShare
-                      data={{
-                        text: producto.nombre,
-                        url: params.globalVars.myUrl + "product/" + producto.id,
-                        title: producto.nombre
-                      }}
-                    >
-                      <button className='btn btn-outline-primary btn-sm rouded'>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-share-fill" viewBox="0 0 16 16">
-                          <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z" />
-                        </svg>
-                      </button>
-                    </RWebShare>
-                  </div>
-                  <br />
+                    <br />
+                    <h3 className='fontSizePreciosSuggested'>Envio gratis en el área metrópolitana de Bucaramanga!</h3>
+                    <p >(Compras superiores a $100.000)</p>
+                    <br />
+                    <h3 className='fontSizePreciosSuggested'>A otras ciudades del pais el valor del envio es de $25.000.</h3>
+                    <br />
+                    <h3 id="tv_llega" ></h3>
+                    {/*formulario producto */}
+                    <PrimaryButton id='btnComprar' type='button' onClick={checkUsuario} style={{ backgroundColor: producto.cantidad == 0 ? 'gray' : 'greeen' }}
+                      className="btn btn-success" disabled={producto.cantidad == 0 ? true : false}>{producto.cantidad == 0 ? 'Producto agotado' : 'Comprar'}
+                    </PrimaryButton>
+                    <button id='btnLoading' style={{ display: 'none', backgroundColor: 'green' }} className="btn btn-primary" type="button" disabled>
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      Loading...
+                    </button>
+                    <div style={{ textAlign: 'right' }} className='container'>
+                      <RWebShare
+                        data={{
+                          text: producto.nombre,
+                          url: params.globalVars.thisUrl + "product/" + producto.id,
+                          title: producto.nombre
+                        }}
+                      >
+                        <button className='btn btn-outline-primary btn-sm rouded'>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-share-fill" viewBox="0 0 16 16">
+                            <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z" />
+                          </svg>
+                        </button>
+                      </RWebShare>
+                    </div>
+                    <br />
+                  </form>
                 </div>
               </div>
             </div>
@@ -400,7 +309,9 @@ const Product = (params) => {
             <br />
           </div>
         </div>
-        <Questions producto={producto.codigo} procesarPreguntaLogin={procesarPreguntaLogin} globalVars={params.globalVars}></Questions>
+        <Questions auth={params.auth} producto={producto} info={params.info} globalVars={params.globalVars} ></Questions>
+        <SuggestedProducts categoria='Otras personas quienes vieron este producto tambien compraron...' productos={productoSugeridos} globalVars={params.globalVars} />
+        <Contact url={params.globalVars.urlRoot} datos={params.info}></Contact>
       </AuthenticatedLayout >
     </>
   )

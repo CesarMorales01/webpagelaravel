@@ -1,16 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-
-use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
-use Inertia\Response;
 use App\Models\Globalvar;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,78 +17,79 @@ class ProfileController extends Controller
         $this->global = new Globalvar();
     }
 
-    public function create()
+    public function edit(string $email, string $message='')
     {
+        $auth = Auth()->user();
         $info = DB::table('info_pagina')->first();
+        $telefonosPagina=DB::table('telefonos_pagina')->get();
+        $info->telefonos=$telefonosPagina;
         $globalVars = $this->global->getGlobalVars();
         $productos = DB::table('productos')->orderBy('id', 'desc')->get();
-        foreach ($productos as $producto) {
-            $imagen = DB::table($this->global->getGlobalVars()->tablaImagenes)->where('fk_producto', '=', $producto->id)->first();
-            $producto->imagen = $imagen;
+        $cedula = DB::table('keys')->where('email', '=', $auth->email)->first();
+        $auth->clave=$cedula->password;
+        $datosCliente=null;
+        if($cedula->cedula!=null){
+            $datosCliente = DB::table('clientes')->where('cedula', '=', $cedula->cedula)->first();
+            $telefonos=DB::table('telefonos_clientes')->where('cedula', '=', $cedula->cedula)->get();
+            $tels=[];
+            foreach($telefonos as $tel){
+                $tels[]=$tel->telefono;
+            }
+            $datosCliente->telefonos=$tels;
         }
-        $auth = Auth()->user();
         $token = csrf_token();
-        return Inertia::render('Profile/CrearCuenta', compact('auth','info', 'globalVars', 'productos', 'token'));
-    }
-
-    public function redirectLogin($request){
-        
-    }
-   
-    public function store(Request $request)
-    {
-        
-        $auth = Auth()->user();
-        $info = DB::table('info_pagina')->first();
-        $globalVars = $this->global->getGlobalVars();  
-        $productos = DB::table('productos')->orderBy('id', 'desc')->get();
-        foreach ($productos as $producto) {
-            $imagen = DB::table($this->global->getGlobalVars()->tablaImagenes)->where('fk_producto', '=', $producto->id)->first();
-            $producto->imagen = $imagen;
-        }
-        return Redirect::route('gologin')->with('message', 'something');
-
-      //  return Inertia::render();
-         
-       // app('App\Http\Controllers\Auth\AuthenticatedSessionController')->store($request);
-        /*
-        DB::table('keys')->insert([
-            'name'=> $request->nombre,
-            'email'=>$request->mail,
-            'password'=> Hash::make($request->clave)
-        ]);
-
-        
-        $auth = Auth()->user();
-        $promos = DB::table('promociones')->orderBy('id', 'desc')->get();
-        $info = DB::table('info_pagina')->first();
-        $telefonosPagina = DB::table('telefonos_pagina')->get();
-        $info->telefonos = $telefonosPagina;
-        $globalVars = $this->global->getGlobalVars();
-        $productos = DB::table('productos')->orderBy('id', 'desc')->get();
-        foreach ($productos as $producto) {
-            $imagen = DB::table($this->global->getGlobalVars()->tablaImagenes)->where('fk_producto', '=', $producto->id)->first();
-            $producto->imagen = $imagen;
-        }
+        $deptos = DB::table('departamentos')->get();
+        $municipios = DB::table('municipios')->get();
         $categorias = DB::table('categorias')->get();
-        return Inertia::render('Welcome', compact('auth', 'promos', 'info', 'globalVars', 'productos', 'categorias'));
-        */
+        return Inertia::render('Profile/MyProfile', compact('info', 'globalVars', 'productos', 'auth', 'datosCliente', 'token', 'deptos', 'municipios', 'message', 'categorias'));
     }
 
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(Request $request)
     {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $contra='';
+        if( strlen($request->clave) == 60 ){
+            $contra=$request->clave;
+        }else{
+            $contra= Hash::make($request->clave);
         }
-
-        $request->user()->save();
-
-        return Redirect::route('profile.edit');
+        DB::table('keys')->where('email', '=', $request->correo)->update([
+            'name' => $request->usuario,
+            'email' => $request->correo,
+            'cedula' => $request->cedula,
+            'password'=>$contra
+        ]);
+        $this->ingresar_telefonos($request);
+        DB::table('clientes')->updateOrInsert(
+            ['cedula' => $request->cedula],
+            [
+                'nombre' => $request->nombre,
+                'apellidos'=>$request->apellidos,
+                'cedula'=>$request->cedula,
+                'direccion'=>$request->direccion,
+                'info_direccion'=>$request->info_direccion,
+                'ciudad'=>$request->codCiudad,
+                'departamento'=>$request->codDepto    
+            ]
+        );
+        return Redirect::route('profile.edit', array('email' => $request->correo, 'message' => 'Datos actualizados!'));
     }
 
-    public function destroy(Request $request)//: RedirectResponse
+    public function ingresar_telefonos($request)
+    {
+        DB::table('telefonos_clientes')->where('cedula', '=', $request->cedula)->delete();
+        for ($i = 0; $i < count($request->telefonos); $i++) {
+            $token = strtok($request->telefonos[$i], ",");
+            while ($token !== false) {
+                DB::table('telefonos_clientes')->insert([
+                    'cedula' => $request->cedula,
+                    'telefono' => $token
+                ]);
+                $token = strtok(",");
+            }
+        }
+    }
+
+    public function destroy(Request $request)
     {
         return response()->json($request, 200, []);
         /*
@@ -116,13 +110,9 @@ class ProfileController extends Controller
         */
     }
 
-    public function checkemail(string $email)
-    {
-        $validar= DB::table('keys')->where('email', '=', $email)->first();
-        if($validar!=null){
-            return response()->json($validar->email, 200, []);
-        }else{
-            return response()->json("vacio", 200, []);
-        }  
+    public function checkpass(string $correo, string $clave){
+        $user=DB::table('keys')->where('email', '=', $correo)->first();
+        $validar=Hash::check($clave, $user->password);
+        return response()->json($validar, 200, []);
     }
 }

@@ -41,7 +41,7 @@ class ProductController extends Controller
         $telefonosPagina = DB::table('telefonos_pagina')->get();
         $info->telefonos = $telefonosPagina;
         $globalVars = $this->global->getGlobalVars();
-        $producto = DB::table('productos')->where('id', '=', $id)->first();
+        $producto = DB::table('productos')->select('id', 'referencia', 'categoria', 'nombre', 'cantidad', 'valor', 'descripcion')->where('id', '=', $id)->first();
         $imagen = DB::table($this->global->getGlobalVars()->tablaImagenes)->where('fk_producto', '=', $id)->get();
         $producto->imagen = $imagen;
         $productos = DB::table('productos')->orderBy('id', 'desc')->get();
@@ -50,6 +50,28 @@ class ProductController extends Controller
             $item->imagen = $imagen;
         }
         $categorias = DB::table('categorias')->get();
-        return Inertia::render('Product/Product', compact('auth', 'info', 'globalVars', 'producto', 'categorias', 'productos'));
+        $token = csrf_token();
+        return Inertia::render('Product/Product', compact('auth', 'info', 'globalVars', 'producto', 'categorias', 'productos', 'token'));
+    }
+
+    public function searchProduct(string $producto){
+        $auth = Auth()->user();
+        $info = DB::table('info_pagina')->first();
+        $telefonosPagina = DB::table('telefonos_pagina')->get();
+        $info->telefonos = $telefonosPagina;
+        $globalVars = $this->global->getGlobalVars();
+        $productos = DB::table('productos')->orWhere('nombre', 'like', '%'.$producto.'%')->orWhere('descripcion', 'like', '%'.$producto.'%')->orWhere('categoria', 'like', '%'.$producto.'%')->get();
+        foreach ($productos as $item) {
+            $imagen = DB::table($this->global->getGlobalVars()->tablaImagenes)->where('fk_producto', '=', $item->id)->first();
+            $item->imagen = $imagen->nombre_imagen;
+            $item->codigo=$item->id;
+        }
+        $allproducts = DB::table('productos')->orderBy('id', 'desc')->get();
+        foreach ($allproducts as $item) {
+            $imagen = DB::table($this->global->getGlobalVars()->tablaImagenes)->where('fk_producto', '=', $item->id)->first();
+            $item->imagen = $imagen->nombre_imagen;
+        }
+        $categorias = DB::table('categorias')->get();
+        return Inertia::render('Product/Search', compact('auth', 'info', 'globalVars', 'productos', 'allproducts', 'categorias', 'producto'));
     }
 }

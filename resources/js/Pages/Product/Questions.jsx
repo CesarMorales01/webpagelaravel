@@ -1,21 +1,31 @@
 import React from 'react'
 import { useState, useEffect } from 'react';
 import GlobalFunctions from '../services/GlobalFunctions';
-
+import Swal from 'sweetalert2';
 
 const Questions = (params) => {
     const glob = new GlobalFunctions()
     const [mensaje, setMensaje] = useState('')
     const [preguntas, setPreguntas] = useState([])
-    console.log(params)
-    useEffect(() => {
 
+    useEffect(() => {
+        if (preguntas.length == 0) {
+            fetchGetQuestion()
+        }
     }, [preguntas])
 
-
+    function fetchGetQuestion() {
+        const url = params.globalVars.thisUrl + 'question/' + params.producto.id
+        fetch(url)
+            .then((response) => {
+                return response.json()
+            }).then((json) => {
+                setPreguntas(json)
+            })
+    }
 
     function goWhats() {
-        let href = "https://api.whatsapp.com/send?phone=057" + params.tel + "&text=";
+        let href = "https://api.whatsapp.com/send?phone=057" + params.info.telefonos[0].telefono + "&text=Hola! Quiero preguntar sobre" + params.producto.nombre;
         window.open(href, "nuevo", "directories=no, location=no, menubar=no, scrollbars=yes, statusbar=no, tittlebar=no, width=800, height=600");
     }
 
@@ -25,75 +35,91 @@ const Questions = (params) => {
         document.getElementById("btnPreguntar").style.backgroundColor = "green";
     }
 
+    function sweetAlert(mensaje) {
+        Swal.fire({
+            title: mensaje,
+            icon: 'warning',
+            showCancelButton: false,
+            showConfirmButton: false,
+            timer: 1500,
+            timerProgressBar: true
+        })
+    }
+
     function check_pregunta() {
-        if (glob.getCookie('correo') == 'Ingresar' || glob.getCookie('correo') == '') {
-            document.getElementById('botonDialogoEliminar').click()
-        } else {
+        if (params.auth) {
             if (mensaje == '') {
-                alert("Escribe una pregunta!")
+                sweetAlert("Escribe una pregunta!")
             } else {
                 fetchRegistrarPregunta()
             }
+        } else {
+            // guardo una cookie para cuando no hay sesion iniciada, y una vez hecha retornar al product
+            glob.setCookie('productForCar', params.producto.id, 3600)
+            sweetAlert("Debes identificarte para preguntar!")
+            setTimeout(() => {
+                window.location.href = params.globalVars.thisUrl + 'log'
+            }, 1500);
+
         }
     }
 
-    function fetchRegistrarPregunta() {
+    function loadingOn() {
         document.getElementById('btnPreguntar').style.display = 'none'
         document.getElementById('botonLoading').style.display = 'inline'
-        const datos = {
-            fecha: glob.getFecha(),
-            cliente: glob.getCookie('correo'),
-            producto: params.producto,
-            pregunta: mensaje
-        }
-        const url = glob.URL_SERV + 'getPreguntas.php?modo=makeQuestion'
-        fetch(url, {
-            method: 'POST',
-            body: JSON.stringify(datos),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-            .then((response) => {
-                return response.json()
-            }).then((json) => {
+    }
+
+    function loadingOff() {
+        document.getElementById('btnPreguntar').style.display = 'inline'
+        document.getElementById('botonLoading').style.display = 'none'
+    }
+
+    function fetchRegistrarPregunta() {
+        const url = params.globalVars.thisUrl + "question"
+        try {
+            loadingOn()
+            const formData = new FormData()
+            formData.append("pregunta", mensaje)
+            formData.append("fecha", glob.getFecha())
+            formData.append("cliente", params.auth.email)
+            formData.append("producto", params.producto.id)
+            axios.post(url, formData, {
+                headers: { 'content-type': 'text/json' }
+            }).then((res) => {
+                loadingOff()
                 recargarPreguntas()
+            }).catch((error) => {
             })
+        } catch (error) {
+        }
     }
 
     function recargarPreguntas() {
         const array = []
         setPreguntas(array)
-        document.getElementById('btnPreguntar').style.display = 'inline'
-        document.getElementById('botonLoading').style.display = 'none'
     }
 
     function functionSetMensaje(event) {
         setMensaje(event.target.value)
     }
 
-    function procesarLoginFromQuestion() {
-        document.getElementById('botonDialogoEliminar').click()
-        document.getElementById('spanIrLogin').click()
-    }
-
     return (
-        <div className='container'>
+        <div style={{ marginTop: '1em', marginBottom: '1em' }} className='container'>
             <div className="row cursorPointer textAlignCenter" >
-                <div style={{ margin: '2px' }} className="col-sm-4 col-md-3 col-lg-2">
-                   <h2 className='fontSizePreciosSuggested'>Pregunta sobre este producto</h2>
+                <div style={{ margin: '2px' }} className="col-12 col-sm-4 col-md-3 col-lg-2">
+                    <h2 className='fontSizePreciosSuggested'>Pregunta sobre este producto</h2>
                 </div>
-                <div style={{ margin: '2px' }} className="col-sm-3 col-md-3 col-lg-2">
+                <div style={{ margin: '2px' }} className="col-12 col-sm-3 col-md-3 col-lg-2">
                     <a onClick={() => preguntar_sobre('Tiene costo el envio?')} className="btn btn-primary fontSizeQuestions">Tiene costo el envio?</a>
                 </div>
-                <div style={{ margin: '2px' }} className="col-sm-4 col-md-3 col-lg-2">
+                <div style={{ margin: '2px' }} className="col-12 col-sm-4 col-md-3 col-lg-2">
                     <a onClick={() => preguntar_sobre('Tiene garantía?')} className="btn btn-primary fontSizeQuestions">Tiene garantía?</a>
                 </div>
-                <div style={{ margin: '2px' }} className="col-sm-6 col-md-3 col-lg-3">
+                <div style={{ margin: '2px' }} className="col-12 col-sm-6 col-md-3 col-lg-3">
                     <a onClick={() => preguntar_sobre('Puedo recoger el producto?')} className="btn btn-primary fontSizeQuestions">Puedo recoger el producto?</a>
                 </div>
-                <div onClick={goWhats} style={{ margin: '2px' }} className="col-sm-6 col-md-2 col-lg-2">
-                    <a ><img src={params.globalVars.urlRoot + 'Imagenes_config/whatsApp_btn.png'} /></a>
+                <div onClick={goWhats} style={{ margin: '2px' }} className="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <a ><img className='centerImgCarousel' src={params.globalVars.urlRoot + 'Imagenes_config/whatsApp_btn.png'} /></a>
                 </div>
                 <br /><br /><br />
             </div>
@@ -115,8 +141,8 @@ const Questions = (params) => {
                 {preguntas.map((item, index) => {
                     return (
                         <div className='container' key={index}>
-                            <h5 style={{ marginTop: '0.2em' }}><li>{item.descripcion_credito}</li></h5>
-                            <p>{item.comentarios == '' ? 'En breve unos de nuestros asesores dará respuesta...' : item.comentarios}</p>
+                            <h5 style={{ marginTop: '0.2em' }}><li>{item.pregunta}</li></h5>
+                            <p style={{ color: 'gray' }}>{item.respuesta == '' ? 'En breve unos de nuestros asesores dará respuesta...' : item.respuesta}</p>
                         </div>
                     )
                 })}

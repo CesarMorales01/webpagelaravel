@@ -3,7 +3,7 @@ import React from 'react'
 const CopyRight = (params) => {
 
     function ventana_genial_app(){
-        let href="https://genialapp.ml/";
+        let href="https://tupaginaweb.site/";
         window.open(href, "nuevo", "directories=no, location=no, menubar=no, scrollbars=yes, statusbar=no, tittlebar=no, width=800, height=600");
     }
   return (

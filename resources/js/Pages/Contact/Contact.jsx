@@ -1,11 +1,12 @@
 import React from 'react'
 import CopyRight from '../UIGeneral/CopyRight';
+import '../../../css/general.css'
+import WhastsappButton from '@/Components/WhatsappButton';
 
 const Contact = (params) => {
 
-
   function goFb() {
-    window.open(params.datos.linkFb, "nuevo", "directories=no, location=no, menubar=no, scrollbars=yes, statusbar=no, tittlebar=no, width=800, height=600");
+    window.open(params.datos.linkfb, "nuevo", "directories=no, location=no, menubar=no, scrollbars=yes, statusbar=no, tittlebar=no, width=800, height=600");
   }
 
   function goWhats() {
@@ -40,15 +41,11 @@ const Contact = (params) => {
                 <br /><br />
                 {params.datos.correo}
                 <br /><br />
-                <div className="container">
-                  <div className="row justify-content-center">
-                    <div  className="col-6">
-                      <a onClick={goWhats} className="btn btn-primary">Escribenos!</a>
-                    </div>
-                    <div style={{ margin: '0.05em', textAlign: 'center' }} className="col-6">
-                      <a onClick={goWhats} className='cursorPointer'><img src={params.url + '/Imagenes_config/whatsapp1.png'} /></a>
-                    </div>
-                  </div>
+                <div onClick={goWhats} className="container">
+                  <WhastsappButton  style={{ cursor: 'pointer' }}  type="button">
+                  <img alt='' height='30em' width='30em' src={params.url + '/Imagenes_config/whatsapp1.png'} />
+                    <a style={{ marginLeft: '0.4em' }}>!Escribénos!</a>
+                  </WhastsappButton>
                 </div>
               </div>
             </div>
@@ -62,7 +59,7 @@ const Contact = (params) => {
               <a onClick={goFb} style={{ marginRight: '2px' }} className="fb-ic cursorPointer">
                 <i style={{ color: 'blue' }} className="fab fa-facebook-f fa-lg white-text mr-4"> </i>
               </a>
-                {/*Google
+              {/*Google
                   <a className="gplus-ic">
                     <i className="fab fa-google-plus-g fa-lg white-text mr-4"> </i>
                   </a>
@@ -76,7 +73,7 @@ const Contact = (params) => {
         </div>
       </div>
       <CopyRight url={params.url} version='' />
-    
+
     </footer>
   )
 }
